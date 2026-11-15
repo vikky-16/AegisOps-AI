@@ -1,0 +1,10 @@
+Metric,One-Shot,Validation-Only,Closed-Loop,Comparison (Closed vs One-Shot),Evidence Status
+Total Incidents Evaluated,8,8,8,Equivalent (8 vs 8),Verified Raw Trials
+Total Recovery Attempts Executed,8,8,15,+87.5% Attempt Overhead,Verified Raw Trials
+Independently Validated Recoveries,2,2,7,+250% Validated Recoveries,Verified Raw Trials
+False-Positive Recovery Declarations,6,0,0,-100% False Declarations,Verified Raw Trials
+Recovery Success Rate (RSR),25.0%,25.0%,87.5%,+62.5 percentage points,Verified Raw Trials
+False Recovery Rate (FRR),75.0%,0.0%,0.0%,-75.0 percentage points,Verified Raw Trials
+Average Recovery Attempts (All Incidents),1.00,1.00,1.875,+0.875 attempts/incident,Verified Raw Trials
+Average Recovery Attempts (Recovered Only),1.00,1.00,1.714,+0.714 attempts/incident,Verified Raw Trials
+Human Escalation Rate (True Unresolved),0.0% (blindly declared recovered),75.0% (unresolved),12.5% (1 of 8 escalated),Safe escalation of unresolvable fault,Verified Raw Trials

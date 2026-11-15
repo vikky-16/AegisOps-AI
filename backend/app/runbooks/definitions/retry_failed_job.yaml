@@ -1,0 +1,21 @@
+id: "retry_failed_job"
+name: "Retry Stalled / Failed Data Pipeline Job"
+description: "Requeues stalled or timeout-failed Data Mart ETL/ELT synchronization job with exponential backoff."
+affected_component: "data_pipeline"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Upstream database connection restored and reachable"
+dry_run:
+  estimated_recovery_time_sec: 15
+  expected_downtime_sec: 0
+  data_loss_risk: "NONE"
+action:
+  type: "DATA_PIPELINE_REMEDY"
+  payload:
+    action: "retry_job"
+verification:
+  pipeline_status: "SUCCESS"
+rollback:
+  available: true
+  description: "Mark job as permanently failed and notify data engineering on-call if second retry fails"

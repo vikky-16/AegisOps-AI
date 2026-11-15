@@ -1,0 +1,42 @@
+metric,value,unit,source,how_measured,meaning,evidence_quality
+Total Managed Database Tables,48,tables,aegisops.db / sqlite_master,Queried sqlite_master for table count,"Scope of persistent entities across incidents, approvals, replicas, and telemetry",Measured runtime value
+Database File Size,8.08,megabytes (MB),aegisops.db,os.path.getsize('aegisops.db'),Current footprint of active SQLite database with WAL journal,Measured runtime value
+Total Registered FastAPI Endpoints,367,endpoints,backend/app/main.py,len(app.routes) with HTTP method filtering,Complete REST API surface across 40 router modules,Measured runtime value
+Total Backend Python Modules,180+,modules,backend/app/**/*.py,Filesystem search excluding virtual environments,Backend modular architecture across 24 packages,Measured runtime value
+Frontend React Page Components,27,views,frontend/src/pages/*.tsx,Count of TSX page components in frontend/src/pages,Total user-facing screens and dashboards in application,Measured runtime value
+Total Discovered Pytest Test Functions,399,test functions,backend/tests/test_*.py,pytest --collect-only across 57 test files,Automated verification test suite coverage,Measured runtime value
+Frontend Vite Build Time,3.42,seconds (s),npm --prefix frontend run build,"Measured via Vite production compiler (2,404 modules)",Client bundle compilation performance with Rolldown,Measured runtime value
+Z-Score Anomaly Threshold,3.0,standard deviations (sigma),backend/app/ai/detectors/zscore_detector.py,Configured constant in ZScoreDetector,Statistical deviation limit for triggering metric anomaly episodes,Configured constant
+EWMA Smoothing Alpha Factor,0.3,factor (0.0-1.0),backend/app/ai/detectors/ewma_detector.py,Configured constant in EWMADetector,Weight assigned to latest metric sample in moving average,Configured constant
+Consecutive Cycle Breach Count,3,cycles,backend/app/ai/detectors/consecutive_breach_detector.py,Configured threshold in ConsecutiveBreachDetector,Required consecutive breached windows before declaring confirmed anomaly to prevent flapping,Configured constant
+IQR Outlier Multiplier,1.5,IQR multiplier,backend/app/ai/detectors/iqr_detector.py,Configured constant in IQRDetector,Tukey boxplot fence multiplier for non-parametric outlier detection,Configured constant
+Isolation Forest Contamination Rate,0.05,proportion (5%),backend/app/ai/detectors/isolation_forest_detector.py,Scikit-learn model hyperparameter,Expected fraction of anomalous vectors in unsupervised telemetry baseline,Configured constant
+Telemetry Streaming Poll Interval,1000,milliseconds (ms),frontend/src/pages/SettingsPage.tsx,Default UI pollInterval state,Client polling frequency for dashboard telemetry bus,Configured constant
+Storage Warning Threshold,95.0,percent (%),backend/app/storage/manager.py,Configured ceiling in storage manager,Disk capacity threshold triggering automatic compression and cold tiering,Configured constant
+Gemini Preferred Default Model,gemini-3.8-flash,model identifier,backend/app/ai/gemini_provider.py,GeminiProvider.DEFAULT_MODEL,Official Google Gemini multimodal model prioritized for SRE operations,Configured constant
+Reasoning Low Thinking Budget,0,thinking tokens,backend/app/ai/gemini_provider.py,REASONING_BUDGET_MAP['low'],Thinking token budget for latency-sensitive probes and fast triage,Configured constant
+Reasoning Medium Thinking Budget,2048,thinking tokens,backend/app/ai/gemini_provider.py,REASONING_BUDGET_MAP['medium'],Balanced thinking token budget for routine RCA and remediation,Configured constant
+Reasoning High Thinking Budget,8192,thinking tokens,backend/app/ai/gemini_provider.py,REASONING_BUDGET_MAP['high'],Deep thinking token budget for complex multi-step RCA and Replica Lab trials,Configured constant
+Model Discovery Cache TTL,300,seconds (s),backend/app/ai/gemini_provider.py,Cache expiry delta in discover_models(),In-memory cache duration for GET /v1beta/models to avoid quota exhaustion,Configured constant
+Gemini Connection Probe Max Tokens,3,tokens,backend/app/ai/gemini_provider.py,generationConfig.maxOutputTokens in test_connection(),Minimal output token allocation for sub-second connection verification,Configured constant
+Gemini RCA Generation Max Output Tokens,1200,tokens,backend/app/ai/gemini_provider.py,generate_response default argument,Maximum output length for structured root cause JSON responses,Configured constant
+Maximum Recovery Attempts (Ceiling),3,iterations,backend/app/api/ai_config.py,get_max_recovery_attempts() / MAX_RECOVERY_ATTEMPTS,Bounded refinement limit preventing infinite recovery retry storms,Configured constant
+Empirical Validation Layers,8,validation criteria,backend/app/healing/sandbox_engine.py,run_empirical_validation() criteria list,"Multi-dimensional empirical check verifying error rate, latency, health, and side-effects",Configured constant
+Replica Lab Lifecycle Stages,17,stages,backend/app/replica/remediation_lab.py,RemediationLab.run_experiment() logged stages,Controlled scientific experiment lifecycle stages from allocation to validation,Configured constant
+Synthetic Workload Requests Per Experiment,2500,requests,backend/app/replica/remediation_lab.py,test_workload_json configuration,Stress workload replayed against replica to reproduce failure and verify fix,Simulated value
+Synthetic Workload Concurrency,50,concurrent workers,backend/app/replica/remediation_lab.py,test_workload_json configuration,Simulated concurrency for replica stress testing,Simulated value
+Independent Validation AI Timeout,10.0,seconds (s),backend/app/api/ai_config.py,VALIDATION_AI_TIMEOUT_SEC in store,Timeout ceiling for independent peer model validation,Configured constant
+Approval Center Initial Load Time,103.13,milliseconds (ms),benchmark_results.json,time.perf_counter() over GET /api/approvals,Measured API latency for operator approval center,Measured runtime value
+Approval Stats Aggregation Time,2.58,milliseconds (ms),benchmark_results.json,time.perf_counter() over GET /api/approvals/stats,Fast SQL aggregation latency across approval states,Measured runtime value
+Incidents List Load Time,160.39,milliseconds (ms),benchmark_results.json,time.perf_counter() over GET /api/incidents,Time to retrieve and serialize 100 incident records,Measured runtime value
+Incident Detail Load Time,21.31,milliseconds (ms),benchmark_results.json,time.perf_counter() over GET /api/incidents/{id},Time to fetch single incident with full evidence JSON,Measured runtime value
+Recovery Planning Time (DB Pool),0.032,milliseconds (ms),benchmark_results.json,time.perf_counter() in EvidenceGroundedDecisionEngine,Rule-based and evidence-guided recovery evaluation latency,Measured runtime value
+Recovery Planning Time (Cache),0.021,milliseconds (ms),benchmark_results.json,time.perf_counter() in EvidenceGroundedDecisionEngine,Decision table evaluation for cache saturation,Measured runtime value
+Sandbox Initialization Time,0.113,milliseconds (ms),benchmark_results.json,time.perf_counter() in initialize_sandbox(),Time to allocate and bind isolated digital twin state,Measured runtime value
+Recovery Step Execution Time,501.45,milliseconds (ms),benchmark_results.json,time.perf_counter() executing connection pool reset,Target service action invocation and telemetry delta capture,Measured runtime value
+8-Point Empirical Validation Time,402.32,milliseconds (ms),benchmark_results.json,time.perf_counter() across 8 validation criteria,Full post-recovery empirical verification latency,Measured runtime value
+Simulation Scenario Load Time,3.33,milliseconds (ms),benchmark_results.json,time.perf_counter() over GET /api/testing-lab/scenarios,Retrieval latency for fault injection scenario catalog,Measured runtime value
+Target Telemetry Throughput Tier 1,100,events per second (EPS),scripts/load_benchmark.py,High-frequency synthetic streamer,Baseline telemetry ingestion rate,Experiment-derived value
+Target Telemetry Throughput Tier 2,500,events per second (EPS),scripts/load_benchmark.py,High-frequency synthetic streamer,Medium enterprise load telemetry ingestion rate,Experiment-derived value
+Target Telemetry Throughput Tier 3,1000,events per second (EPS),scripts/load_benchmark.py,High-frequency synthetic streamer,Peak burst load telemetry ingestion rate,Experiment-derived value
+Synthetic Anomaly Injection Ratio,5.0,percent (%),scripts/load_benchmark.py,i % 20 == 0 in event generator,Controlled anomaly injection frequency during load tests,Configured constant

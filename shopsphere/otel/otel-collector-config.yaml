@@ -1,0 +1,80 @@
+# OpenTelemetry Collector Configuration for ShopSphere
+# Receives telemetry from running ShopSphere microservices and streams to Redpanda topics and AegisOps
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 100
+    timeout: 200ms
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+  resource:
+    attributes:
+      - key: tenant_id
+        value: "shopsphere"
+        action: upsert
+      - key: company.name
+        value: "ShopSphere"
+        action: upsert
+
+exporters:
+  kafka/logs:
+    brokers:
+      - redpanda:9092
+    protocol_version: "2.0.0"
+    topic: "shopsphere-logs"
+    encoding: otlp_json
+
+  kafka/metrics:
+    brokers:
+      - redpanda:9092
+    protocol_version: "2.0.0"
+    topic: "shopsphere-metrics"
+    encoding: otlp_json
+
+  kafka/traces:
+    brokers:
+      - redpanda:9092
+    protocol_version: "2.0.0"
+    topic: "shopsphere-traces"
+    encoding: otlp_json
+
+  otlphttp/aegisops:
+    endpoint: "http://172.18.80.1:8000/api/otel"
+    headers:
+      X-API-Key: "agt_live_shopsphere_11112222333344445555"
+      X-Tenant-ID: "shopsphere"
+    tls:
+      insecure: true
+
+  logging:
+    loglevel: info
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [kafka/traces, otlphttp/aegisops, logging]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [kafka/metrics, otlphttp/aegisops, logging]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [kafka/logs, otlphttp/aegisops, logging]

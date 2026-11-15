@@ -1,0 +1,7 @@
+Fault Class,Scenarios,One-Shot RSR,One-Shot FRR,Closed-Loop RSR,Closed-Loop FRR,Mean Attempts,Resolution Behavior
+Resource Exhaustion (Pool/Memory/CPU),"3 (db_pool, memory, cpu)",33.3% (1/3),66.7% (2/3),100.0% (3/3),0.0%,1.67,Pool fixed in 1 attempt; Memory & CPU resolved on attempt 2 after re-ranking
+Process Crash (SIGSEGV/OOM),1 (service_crash),100.0% (1/1),0.0%,100.0% (1/1),0.0%,1.00,Single restart cleanly restores PID and heartbeat across all strategies
+Thread Starvation / Latency,1 (high_api_latency),0.0% (0/1),100.0% (1/1),100.0% (1/1),0.0%,2.00,Initial cache clear failed; refinement promoted SCALE_WORKERS which resolved lock contention
+Dependency Cascade,1 (dependency_unavailable),0.0% (0/1),100.0% (1/1),100.0% (1/1),0.0%,2.00,Restart failed; refinement promoted ENABLE_CIRCUIT_BREAKER_FALLBACK resolving cascade
+Queue Backlog / Consumer Lag,1 (queue_backlog),0.0% (0/1),100.0% (1/1),100.0% (1/1),0.0%,2.00,Restart failed; refinement promoted SCALE_CONSUMER_WORKERS draining backlog
+Configuration Syntax Error,1 (configuration_error),0.0% (0/1),100.0% (1/1),0.0% (0/1),0.0%,3.00,"Correctly reached max iterations (k=3), terminated, and escalated to human SRE without false recovery"

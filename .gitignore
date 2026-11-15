@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.pytest_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# AegisOps Data & Logs
+data/logs/*.log
+data/archive/*.gz
+data/archive/*.tar.gz
+backend/aegisops.db
+backend/aegisops.db-journal
+backend/aegisops.db-wal
+backend/aegisops.db-shm
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local Dev Credentials & Backups
+credentials_dev_local.json
+*.credentials.json
+backups/
+

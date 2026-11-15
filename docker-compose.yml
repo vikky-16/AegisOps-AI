@@ -1,0 +1,216 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Streaming Backbone: Apache Kafka (KRaft Mode - No ZooKeeper)
+  # -------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: aegisops-kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9094'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # Telemetry Gateway: OpenTelemetry Collector Contrib
+  # -------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.95.0
+    container_name: aegisops-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "13133:13133" # Health check extension
+      - "55679:55679" # zPages extension
+    restart: on-failure
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # Distributed Microservices Mesh (Demonstration Environment)
+  # -------------------------------------------------------------
+  database-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+    environment:
+      - SERVICE_MODULE=services.database_service.app
+      - PORT=8004
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    ports:
+      - "8004:8004"
+    networks:
+      - aegis-net
+
+  service-b:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+    environment:
+      - SERVICE_MODULE=services.service_b.app
+      - PORT=8003
+      - DATABASE_SERVICE_URL=http://database-service:8004
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    ports:
+      - "8003:8003"
+    depends_on:
+      - database-service
+    networks:
+      - aegis-net
+
+  service-a:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+    environment:
+      - SERVICE_MODULE=services.service_a.app
+      - PORT=8002
+      - SERVICE_B_URL=http://service-b:8003
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    ports:
+      - "8002:8002"
+    depends_on:
+      - service-b
+    networks:
+      - aegis-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+    environment:
+      - SERVICE_MODULE=services.gateway.app
+      - PORT=8001
+      - SERVICE_A_URL=http://service-a:8002
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    ports:
+      - "8001:8001"
+    depends_on:
+      - service-a
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # AegisOps AI Central Orchestrator (Backend)
+  # -------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GATEWAY_URL=http://gateway:8001
+      - SERVICE_A_URL=http://service-a:8002
+      - SERVICE_B_URL=http://service-b:8003
+      - DATABASE_SERVICE_URL=http://database-service:8004
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    restart: on-failure
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      gateway:
+        condition: service_started
+      service-a:
+        condition: service_started
+      service-b:
+        condition: service_started
+      database-service:
+        condition: service_started
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # AegisOps AI Console (Frontend)
+  # -------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # Durable Data Storage: PostgreSQL (Multi-Tenant Relational Data)
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: aegisops-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=aegisops
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aegisops || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - aegis-net
+
+  # -------------------------------------------------------------
+  # Distributed Cache & Ephemeral State: Redis
+  # -------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: aegisops-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aegis-net
+
+networks:
+  aegis-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:

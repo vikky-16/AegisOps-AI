@@ -1,0 +1,295 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # 1. PostgreSQL (ShopSphere Relational Source of Truth)
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: shopsphere-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=shopsphere
+      - POSTGRES_PASSWORD=shopsphere_pass
+      - POSTGRES_DB=shopsphere_db
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - shopsphere-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopsphere -d shopsphere_db || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 2. Redis (ShopSphere Ephemeral Stock & Cart Cache)
+  # -------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: shopsphere-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 3. Redpanda (Streaming Telemetry Message Broker)
+  # -------------------------------------------------------------
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.10
+    container_name: shopsphere-redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - 0.0.0.0:9092
+      - --advertise-kafka-addr
+      - redpanda:9092
+      - --smp
+      - "1"
+      - --memory
+      - 512M
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --check=false
+    ports:
+      - "19092:19092"
+      - "9092:9092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9644/v1/status/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 4. OpenTelemetry Collector (Contrib)
+  # -------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.95.0
+    container_name: shopsphere-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 5. Inventory Service (Warehouse Stock & Availability)
+  # -------------------------------------------------------------
+  inventory-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shopsphere-base:latest
+    container_name: shopsphere-inventory-service
+    environment:
+      - SERVICE_MODULE=shopsphere.services.inventory_service.app
+      - PORT=8102
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=shopsphere
+      - POSTGRES_PASSWORD=shopsphere_pass
+      - POSTGRES_DB=shopsphere_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - TENANT_ID=shopsphere
+    ports:
+      - "8102:8102"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 6. Payment Service (Transaction Settlement Ledger)
+  # -------------------------------------------------------------
+  payment-service:
+    image: shopsphere-base:latest
+    container_name: shopsphere-payment-service
+    environment:
+      - SERVICE_MODULE=shopsphere.services.payment_service.app
+      - PORT=8103
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=shopsphere
+      - POSTGRES_PASSWORD=shopsphere_pass
+      - POSTGRES_DB=shopsphere_db
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - TENANT_ID=shopsphere
+    ports:
+      - "8103:8103"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 7. Notification Service (Customer Confirmations)
+  # -------------------------------------------------------------
+  notification-service:
+    image: shopsphere-base:latest
+    container_name: shopsphere-notification-service
+    environment:
+      - SERVICE_MODULE=shopsphere.services.notification_service.app
+      - PORT=8104
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=shopsphere
+      - POSTGRES_PASSWORD=shopsphere_pass
+      - POSTGRES_DB=shopsphere_db
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - TENANT_ID=shopsphere
+    ports:
+      - "8104:8104"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 8. Order Service (Order Orchestration Engine)
+  # -------------------------------------------------------------
+  order-service:
+    image: shopsphere-base:latest
+    container_name: shopsphere-order-service
+    environment:
+      - SERVICE_MODULE=shopsphere.services.order_service.app
+      - PORT=8101
+      - INVENTORY_SERVICE_URL=http://inventory-service:8102
+      - PAYMENT_SERVICE_URL=http://payment-service:8103
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8104
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=shopsphere
+      - POSTGRES_PASSWORD=shopsphere_pass
+      - POSTGRES_DB=shopsphere_db
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - TENANT_ID=shopsphere
+    ports:
+      - "8101:8101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 9. API Gateway (Ingress Edge Routing)
+  # -------------------------------------------------------------
+  api-gateway:
+    image: shopsphere-base:latest
+    container_name: shopsphere-api-gateway
+    environment:
+      - SERVICE_MODULE=shopsphere.services.gateway.app
+      - PORT=8100
+      - ORDER_SERVICE_URL=http://order-service:8101
+      - INVENTORY_SERVICE_URL=http://inventory-service:8102
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - TENANT_ID=shopsphere
+    ports:
+      - "8100:8100"
+    depends_on:
+      order-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 10. Traffic Generator (Realistic HTTP Load Driver)
+  # -------------------------------------------------------------
+  traffic-generator:
+    image: shopsphere-base:latest
+    container_name: shopsphere-traffic-generator
+    environment:
+      - SERVICE_MODULE=shopsphere.traffic.generator
+      - GATEWAY_URL=http://api-gateway:8100
+      - TRAFFIC_REQUESTS_PER_SECOND=50
+    depends_on:
+      api-gateway:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+  # -------------------------------------------------------------
+  # 11. Redpanda to AegisOps Streaming Bridge
+  # -------------------------------------------------------------
+  aegisops-streamer:
+    image: shopsphere-base:latest
+    container_name: shopsphere-aegisops-streamer
+    environment:
+      - SERVICE_MODULE=shopsphere.streamer.redpanda_consumer
+      - REDPANDA_BOOTSTRAP_SERVERS=redpanda:9092
+      - AEGISOPS_GATEWAY_URL=http://172.18.80.1:8000/api/v1/telemetry
+      - AEGISOPS_API_KEY=agt_live_shopsphere_11112222333344445555
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - shopsphere-net
+
+networks:
+  shopsphere-net:
+    driver: bridge
+
+volumes:
+  shopsphere-pgdata:

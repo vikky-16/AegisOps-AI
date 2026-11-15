@@ -1,0 +1,21 @@
+id: "rotate_logs"
+name: "Rotate Application Logs"
+description: "Safely rotates active log files exceeding size thresholds to timestamped archive targets and reopens file descriptors."
+affected_component: "storage_subsystem"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Storage manager process active"
+dry_run:
+  estimated_recovery_time_sec: 1
+  expected_downtime_sec: 0
+  data_loss_risk: "NONE"
+action:
+  type: "STORAGE_ACTION"
+  payload:
+    action: "rotate_logs"
+verification:
+  max_log_file_mb: 50
+rollback:
+  available: true
+  description: "Rotated files are preserved with timestamp suffixes and can be renamed back if needed"

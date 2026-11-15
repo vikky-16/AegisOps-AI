@@ -1,0 +1,66 @@
+# OpenTelemetry Collector Configuration for AegisOps AI
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 256
+    timeout: 500ms
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+  resource:
+    attributes:
+      - key: environment
+        value: "development"
+        action: insert
+      - key: collector.source
+        value: "aegisops-otel-gateway"
+        action: insert
+
+exporters:
+  kafka:
+    brokers:
+      - kafka:9092
+    protocol_version: "2.0.0"
+    topic: "telemetry.raw"
+    encoding: otlp_json
+
+  otlphttp/backend:
+    endpoint: "http://backend:8000/api/otel"
+    tls:
+      insecure: true
+
+  logging:
+    loglevel: info
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [logging, otlphttp/backend, kafka]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [logging, otlphttp/backend, kafka]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [logging, otlphttp/backend, kafka]
+  telemetry:
+    logs:
+      level: info

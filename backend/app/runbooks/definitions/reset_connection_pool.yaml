@@ -1,0 +1,26 @@
+id: "reset_connection_pool"
+name: "Reset & Flush Database Connection Pool"
+description: "Flushes exhausted or stalled database client connections, terminates orphaned idle sessions, and resets pool capacity."
+affected_component: "database_service"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Database persistence daemon must be reachable"
+  - "Target pool capacity must exceed 85% utilization"
+dry_run:
+  estimated_recovery_time_sec: 1
+  expected_downtime_sec: 0
+  data_loss_risk: "NONE"
+action:
+  type: "HTTP_REMEDY"
+  endpoint: "/remedy"
+  payload:
+    action: "reset_connections"
+verification:
+  health_endpoint: "/health"
+  expected_status: "HEALTHY"
+  max_error_rate: 0.00
+  max_active_connections_ratio: 0.30
+rollback:
+  available: true
+  description: "Pool manager will automatically reconnect on demand if active clients re-request sockets"

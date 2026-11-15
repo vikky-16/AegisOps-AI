@@ -1,0 +1,27 @@
+id: "restart_service"
+name: "Graceful Microservice Restart"
+description: "Gracefully restarts target application service worker process and reinitializes socket bindings."
+affected_component: "application_service"
+risk_level: "MEDIUM"
+approval_required: false
+prerequisites:
+  - "Target service must be responding to socket or supervisor signals"
+  - "No active write transaction lock held longer than 30s"
+dry_run:
+  estimated_recovery_time_sec: 4
+  expected_downtime_sec: 2
+  data_loss_risk: "NONE"
+action:
+  type: "HTTP_REMEDY"
+  endpoint: "/remedy"
+  payload:
+    action: "restart"
+verification:
+  health_endpoint: "/health"
+  expected_status: "HEALTHY"
+  max_error_rate: 0.01
+  max_latency_p95_ms: 100
+rollback:
+  available: true
+  runbook_id: "rollback_config"
+  description: "Restore previous container or worker state if new process fails health probe"

@@ -1,0 +1,23 @@
+id: "archive_logs"
+name: "Compress & Archive Inactive Logs"
+description: "Compresses rotated log files with gzip and moves them into immutable compressed archive directory, reclaiming storage."
+affected_component: "storage_subsystem"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Gzip compression library available"
+  - "Storage used exceeds threshold"
+dry_run:
+  estimated_recovery_time_sec: 3
+  expected_downtime_sec: 0
+  estimated_reclaimed_gb: 18.2
+  data_loss_risk: "NONE"
+action:
+  type: "STORAGE_ACTION"
+  payload:
+    action: "archive_logs"
+verification:
+  max_used_storage_pct: 80.0
+rollback:
+  available: true
+  description: "Archived .tar.gz files remain intact and can be decompressed on demand"

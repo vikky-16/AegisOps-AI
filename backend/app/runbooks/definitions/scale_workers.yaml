@@ -1,0 +1,25 @@
+id: "scale_workers"
+name: "Scale Application Worker Concurrency"
+description: "Expands the active thread pool and worker concurrency to drain high queue depth and relieve CPU saturation."
+affected_component: "application_service"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Host memory capacity has at least 500MB available headroom"
+dry_run:
+  estimated_recovery_time_sec: 2
+  expected_downtime_sec: 0
+  data_loss_risk: "NONE"
+action:
+  type: "HTTP_REMEDY"
+  endpoint: "/remedy"
+  payload:
+    action: "scale_workers"
+verification:
+  health_endpoint: "/health"
+  expected_status: "HEALTHY"
+  max_error_rate: 0.01
+  max_latency_p95_ms: 50
+rollback:
+  available: true
+  description: "Downscale worker pool concurrency back to default baseline if memory pressure is detected"

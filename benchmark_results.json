@@ -1,0 +1,17 @@
+{
+  "approval_center_initial_load_sec": 0.10313300002599135,
+  "approval_stats_load_sec": 0.0025751999928615987,
+  "incidents_list_load_sec": 0.16039410000666976,
+  "incident_detail_load_sec": 0.02130690001649782,
+  "recovery_planning_db_sec": 3.15000070258975e-05,
+  "recovery_planning_cache_sec": 2.1200045011937618e-05,
+  "recovery_planning_500_sec": 3.0099996365606785e-05,
+  "recovery_planning_uncertain_sec": 1.1299969628453255e-05,
+  "sandbox_setup_sec": 0.0001134999911300838,
+  "recovery_execution_sec": 0.5014526000013575,
+  "validation_time_sec": 0.4023169000283815,
+  "sre_response_latency_sec": 130.52776319999248,
+  "sre_model_or_fallback": "evidence_grounded_engine",
+  "sre_history_retrieval_sec": 0.005,
+  "simulation_load_resume_sec": 0.0033257000031881034
+}

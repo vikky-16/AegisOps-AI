@@ -1,0 +1,25 @@
+id: "rollback_config"
+name: "Rollback Configuration to Last Known Good"
+description: "Reverts faulty runtime configuration parameters, environment flags, or traffic routing to previous verified checkpoint."
+affected_component: "application_service"
+risk_level: "HIGH"
+approval_required: true
+prerequisites:
+  - "Verified backup snapshot available"
+  - "Administrator review authorized"
+dry_run:
+  estimated_recovery_time_sec: 5
+  expected_downtime_sec: 2
+  data_loss_risk: "LOW"
+action:
+  type: "HTTP_REMEDY"
+  endpoint: "/remedy"
+  payload:
+    action: "rollback_config"
+verification:
+  health_endpoint: "/health"
+  expected_status: "HEALTHY"
+  max_error_rate: 0.00
+rollback:
+  available: true
+  description: "Re-apply modified configuration manually from audit history if rollback is undesirable"

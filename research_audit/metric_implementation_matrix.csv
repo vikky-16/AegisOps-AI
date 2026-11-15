@@ -1,0 +1,8 @@
+Metric,Implemented in Source,Function / File,Unit Test Covered,Status
+RSR,YES,validator.py:validate_solution(),YES (test_closed_loop_recovery_validation.py),Mathematically Sound
+FRR,YES,validator.py:validate_solution(),YES,Mathematically Sound
+FARR,PARTIAL,closed_loop_engine.py:execute_history,NO,Ambiguous Acronym; Needs Standardization
+ERR,AMBIGUOUS,closed_loop_engine.py,NO,Conflicted: Effective Recovery Rate vs Escalation Rate
+ARA,YES,closed_loop_engine.py:iteration_count,YES,Mathematically Sound (Distinguish All vs Recovered)
+TTVR,YES,benchmark_and_verify.py:timings,YES,Requires Censoring Correction for Unresolved
+SER,YES,validator.py:side_effect_detected,YES,Denominator Mismatch: Standardize to Incident Denominator

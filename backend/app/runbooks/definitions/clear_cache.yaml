@@ -1,0 +1,23 @@
+id: "clear_cache"
+name: "Purge In-Memory Cache Buffers"
+description: "Flushes volatile in-memory transient caches and query result buffers to recover heap space without process restart."
+affected_component: "application_service"
+risk_level: "LOW"
+approval_required: false
+prerequisites:
+  - "Cache subsystem is safe for cold reload"
+dry_run:
+  estimated_recovery_time_sec: 1
+  expected_downtime_sec: 0
+  data_loss_risk: "NONE"
+action:
+  type: "HTTP_REMEDY"
+  endpoint: "/remedy"
+  payload:
+    action: "clear_cache"
+verification:
+  health_endpoint: "/health"
+  expected_status: "HEALTHY"
+rollback:
+  available: true
+  description: "Cache misses will dynamically repopulate entries on subsequent read requests"
